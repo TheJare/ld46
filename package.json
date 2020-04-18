@@ -1,0 +1,23 @@
+{
+    "name": "keepitalive-ld46",
+    "version": "0.1.0",
+    "displayName": "Keep it Alive LD46",
+    "author": {
+        "name": "Javier Arevalo",
+        "email": "jare@iguanademos.com"
+    },
+    "license": "MIT",
+    "keywords": [
+        "game",
+        "typescript",
+        "ludum dare"
+    ],
+    "scripts": {
+        "watch": "concurrently \"tsc --watch src/app.ts --module amd --target ES5 --outFile dist/app.js --sourceMap\" \"cpx src/{index.html,almond.js} dist -u -w\" "
+    },
+    "devDependencies": {
+        "concurrently": "^5.1.0",
+        "cpx": "^1.5.0",
+        "typescript": "^3.8.3"
+    }
+}
