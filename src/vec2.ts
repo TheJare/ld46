@@ -34,9 +34,14 @@ export default class Vec2 {
     public subbed(o: Vec2): Vec2 {
         return new Vec2(this.x - o.x, this.y - o.y);
     }
-    public scale(o: Vec2): Vec2 {
-        this.x *= o.x;
-        this.y *= o.y;
+    public scale(o: Vec2 | number): Vec2 {
+        if (o instanceof Vec2) {
+            this.x *= o.x;
+            this.y *= o.y;
+        } else {
+            this.x *= o;
+            this.y *= o;
+        }
         return this;
     }
     public scaled(o: Vec2 | number): Vec2 {

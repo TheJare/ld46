@@ -1,18 +1,28 @@
 import Vec2 from "../vec2";
 import UIElement from "../uielement";
-import { State } from "../gamemanager";
+import { State, GameManager } from "../gamemanager";
 import MenuState from "./menustate";
+import GlobalData from "./globaldata";
 
 const kPlayerMaxHealth = 10;
+const kPlayerMaxStrength = 100;
+
+enum EntityType {
+    BaseEntity,
+    Player,
+    Waterdrop,
+    Block
+}
 
 class Entity {
     public pos: Vec2 = new Vec2(0,0);
     public radius: number = 4;
     public vel: Vec2 = new Vec2(0,0);
     public health: number = 1;
+    public type: EntityType = EntityType.BaseEntity;
+    public time: number = 0;
 
-    public constructor(public game: GameState, pos: Vec2) {
-        this.pos.copy(pos);
+    public constructor(public game: GameState) {
     }
 
     public get alive(): boolean { return this.health > 0; }
@@ -23,24 +33,39 @@ class Entity {
     }
 
     public Tick(dt: number) {
+        this.time += dt;
         this.pos.add(this.vel.scaled(dt));
     }
 }
 
 class Player extends Entity {
+    speed: number = 70;
+    public strength: number = kPlayerMaxStrength;
+
     public constructor(game: GameState) {
-        super(game, new Vec2(0,0));
+        super(game);
         this.health = kPlayerMaxHealth;
+        this.type = EntityType.Player;
+    }
+
+    public DeltaStrength(delta: number) {
+        this.strength = Math.max(0, Math.min(100, this.strength + delta));
+        if (this.strength <= 0) {
+            this.health--;
+            this.strength = kPlayerMaxStrength/4;
+        }
     }
 
     public Tick(dt: number) {
         super.Tick(dt);
         let dist = this.game.cursor.subbed(this.pos);
         let md = dist.magnitude();
-        if (md > 0.001) {
-            this.vel = dist.scaled(100/md);
+        if (md > 2) {
+            this.vel = dist.scaled(this.speed/md);
+            this.DeltaStrength(-30*dt);
         } else {
             this.vel.set(0,0);
+            this.DeltaStrength(50*dt);
         }
     }
 
@@ -53,15 +78,18 @@ class Player extends Entity {
 
 class Waterdrop extends Entity {
     public constructor(game: GameState) {
-        super(game, new Vec2((Math.random()*0.9 + 0.05)*game.cam.size.x, 1));
-        this.vel = new Vec2((Math.random()*2-1)*50, 100);
+        super(game);
+        this.pos = new Vec2((Math.random()*1.2 - 0.1)*game.cam.size.x, 1-this.radius);
+        this.vel = new Vec2((Math.random()*2-1)*15, (Math.random()*0.2+1)*60);
         this.health = kPlayerMaxHealth;
+        this.type = EntityType.Waterdrop;
     }
 
     public Tick(dt: number) {
         super.Tick(dt);
         if (this.game.player.alive) {
             if (this.pos.subbed(this.game.player.pos).magnitude() < this.radius) {
+                this.game.player.DeltaStrength(-30);
                 this.game.player.health--;
                 this.health = -1;
             }
@@ -77,17 +105,91 @@ class Waterdrop extends Entity {
     }
 }
 
+class Sprinkler extends Waterdrop {
+    spurtTimer: number = 1;
+
+    public constructor(game: GameState) {
+        super(game);
+        this.pos.y -= (7-this.radius);
+        this.radius = 7;
+    }
+
+    public Tick(dt: number) {
+        super.Tick(dt);
+        if (this.alive) {
+            this.spurtTimer -= dt;
+            if (this.spurtTimer <= 0) {
+                this.spurtTimer = 1;
+                for (let i = 0; i < 4; i++) {
+                    let e = new Waterdrop(this.game);
+                    let a = this.time + i*Math.PI/2/4;
+                    e.vel = (new Vec2(Math.cos(a), Math.sin(a))).scale(100);
+                    e.pos = this.pos.clone();
+                    this.game.AddEntity(e);
+                }
+            }
+        }
+    }
+
+    public Render(dt: number) {
+        this.game.ctx.fillStyle = "#00FFFF";
+        this.game.ctx.fillRect(this.pos.x-this.radius, this.pos.y-this.radius, 2*this.radius, 2*this.radius);
+    }
+}
+
+class Block extends Entity {
+    public constructor(game: GameState) {
+        super(game);
+        this.radius = 80;
+        this.pos = new Vec2((Math.random()*0.9 + 0.05)*game.cam.size.x, 1-this.radius);
+        this.vel = new Vec2((Math.random()*2-1)*5, 40);
+        this.type = EntityType.Block;
+    }
+
+    public Tick(dt: number) {
+        super.Tick(dt);
+        if (this.game.player.alive) {
+            if (this.pos.subbed(this.game.player.pos).magnitude() < this.radius) {
+                this.game.player.health = 0; // Instakill
+                this.health = -1;
+            }
+        }
+        for (let i = 0; i < this.game.entities.length; i++) {
+            let e = this.game.entities[i];
+            if (e.type == EntityType.Waterdrop && this.pos.subbed(e.pos).magnitude() < this.radius) {
+                e.health = -1;
+            }
+        }
+        if (this.pos.x < -this.radius || (this.pos.x-this.radius) >= this.game.cam.size.x || (this.pos.y-this.radius) >= this.game.cam.size.y) {
+            this.health = -1;
+        }
+    }
+
+    public Render(dt: number) {
+        this.game.ctx.fillStyle = "#000000";
+        this.game.ctx.beginPath();
+        this.game.ctx.arc(this.pos.x, this.pos.y, this.radius, 0, 2*Math.PI);
+        this.game.ctx.fill();
+    }
+}
+
 export default class GameState extends State {
     ui: UIElement[];
     cursor: Vec2;
-    public player: Player = new Player(this);
-    entities: Entity[];
+    public player: Player;
+    public entities: Entity[];
     private newEntities: Entity[];
 
-    private timeToNextWaterdrop = 0;
-    private waterdropsPerSec = 30;
+    private timeToNextEnemy = 0;
+    private enemiesPerSec = 30;
+    private numEnemies = 0;
+
+    public constructor(game: GameManager, public globalData: GlobalData) {
+        super(game);
+    }
 
     public Enter() {
+        this.player = new Player(this);
         this.player.pos.set(this.game.cam.size.x/2, this.game.cam.size.y/2);
         this.cursor = this.player.pos.clone();
         this.entities = [this.player];
@@ -98,8 +200,8 @@ export default class GameState extends State {
         this.newEntities.push(e);
     }
 
-
     public Tick(dt: number) {
+        super.Tick(dt);
 
         function RunEntities(entities: Entity[], dt: number): Entity[] {
             for (let i = 0; i < entities.length; i++) {
@@ -126,14 +228,20 @@ export default class GameState extends State {
             this.newEntities = [];
         }
 
-        this.timeToNextWaterdrop -= dt;
-        while (this.timeToNextWaterdrop <= 0) {
-            this.AddEntity(new Waterdrop(this));
-            this.timeToNextWaterdrop = 1/this.waterdropsPerSec;
+        this.timeToNextEnemy -= dt;
+        while (this.timeToNextEnemy <= 0) {
+            this.numEnemies++;
+            this.AddEntity(((this.numEnemies % 100) == 0)?
+                new Block(this) :
+                (((this.numEnemies % 80) == 30)?
+                    new Sprinkler(this) :
+                    new Waterdrop(this)));
+            this.timeToNextEnemy = 1/this.enemiesPerSec;
         }
 
         if (!this.player.alive) {
-            this.game.QueueState(new MenuState(this.game));
+            this.globalData.AddScore(Math.floor(this.time));
+            this.game.QueueState(new MenuState(this.game, this.globalData));
         }
 
         this.Render(dt);
@@ -159,12 +267,12 @@ export default class GameState extends State {
 
         this.game.ctx.font = '24px sans-serif';
         this.game.ctx.textAlign = "left";
-        // this.game.ctx.fillText(`Level: ${this.player.level}`, 2, 24);
+        this.game.ctx.fillText(`Score: ${Math.floor(this.time)}`, 2, 24);
 
         this.game.ctx.fillStyle = "#000";
-        this.game.ctx.fillRect(2, 30, 100, 10);
+        // this.game.ctx.fillRect(2, 30, 100, 10);
         this.game.ctx.fillRect(2, 43, 100, 10);
-        let xpf = 0.5;
+        let xpf = Math.pow(this.player.strength / 100, 2);
         let hpf = this.player.health / kPlayerMaxHealth;
         this.game.ctx.fillStyle = "#4FF";
         this.game.ctx.fillRect(2, 30, 100*xpf, 10);

@@ -1,6 +1,6 @@
 
 var requestedfs = false;
-export default function RequestFullscreen(target: HTMLElement) {
+export function RequestFullscreen(target?: HTMLElement) {
     let el: any = target || document.body;
     let d = document as any;
     let requestMethod = el.requestFullscreen || el.webkitRequestFullscreen 
@@ -20,4 +20,10 @@ export default function RequestFullscreen(target: HTMLElement) {
             requestMethod.call(el);
         }
     }
+}
+
+export function IsFullscreen() {
+    let d = document as any;
+    return !!(document.fullscreenElement || d.webkitFullscreenElement
+        || d.mozFullScreenElement || d.msFullscreenElement);
 }
