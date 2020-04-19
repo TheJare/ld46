@@ -11,7 +11,7 @@ An attempt at an entry to Ludum Dare #46. As usual, just a few hours
 available to do something, but at least I cleaned up some old Typescript
 gamedev bits I had.
 
-As usualy, I tweeted my original design shortly after waking up and reading about the topic, **Keep it Alive**:
+As usual, I tweeted my original design shortly after waking up and reading about the topic, **Keep it Alive**:
 
 - reach the goal keeping a candle alive, avoiding drops or buckets of water thrown at you.
 You also need to be careful how you move or the wind puts out the flame, but too slow and wax runs out.

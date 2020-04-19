@@ -31,11 +31,14 @@ export default class MenuState extends State
             () => RequestFullscreen(this.game.canvas)
         ));
 
-        this.game.ctx.fillStyle = "#BBBBBB";
+        this.game.ctx.fillStyle = "#FFFFFF";
         this.game.ctx.font = '16px sans-serif';
         this.game.ctx.textAlign = "right";
-        this.game.ctx.fillText('A Ludum Dare #46 entry', this.game.cam.size.x, this.game.cam.size.y-60);
-        this.game.ctx.fillText('by Javier Arevalo', this.game.cam.size.x, this.game.cam.size.y-30);
+        this.game.ctx.fillText('Avoid everyting -', this.game.cam.size.x-3, this.game.cam.size.y-120);
+        this.game.ctx.fillText('Watch your stamina -', this.game.cam.size.x-3, this.game.cam.size.y-100);
+        this.game.ctx.fillStyle = "#BBBBBB";
+        this.game.ctx.fillText('A Ludum Dare #46 entry', this.game.cam.size.x-3, this.game.cam.size.y-60);
+        this.game.ctx.fillText('by Javier Arevalo', this.game.cam.size.x-3, this.game.cam.size.y-30);
 
         this.game.ctx.font = '20px sans-serif';
         this.game.ctx.fillStyle = "#00FFFF";

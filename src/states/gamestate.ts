@@ -41,7 +41,7 @@ class Entity {
 }
 
 class Player extends Entity {
-    speed: number = 100;
+    speed: number = 85;
     public strength: number = kPlayerMaxStrength;
 
     public constructor(game: GameState) {
@@ -281,14 +281,19 @@ export default class GameState extends State {
         while (this.timeToNextEnemy <= 0) {
             this.numEnemies++;
             let enemySpawnChances = [
-                { mod: 100, val:  0, type: Block },
-                { mod:  80, val: 30, type: Sprinkler },
-                { mod: 170, val: 66, type: TrackerDrop },
-                { mod:  23, val:  7, type: FastDrop },
-                { mod:   1, val:  0, type: Waterdrop }
+                { mod: 100, val:  0, time: 5, type: Block },
+                { mod:  80, val: 55, time: 45, type: Sprinkler },
+                { mod:  80, val: 30, time: 10, type: Sprinkler },
+                { mod: 170, val: 34, time: 75, type: TrackerDrop },
+                { mod: 170, val: 66, time: 15, type: TrackerDrop },
+                { mod:  23, val: 15, time: 35, type: FastDrop },
+                { mod:  23, val:  7, time: 5, type: FastDrop },
+                { mod:   3, val:  1, time: 60, type: Waterdrop },
+                { mod:   2, val:  1, time: 10, type: Waterdrop },
+                { mod:   2, val:  0, time: 0, type: Waterdrop }
             ];
             for (let chance of enemySpawnChances) {
-                if ((this.numEnemies % chance.mod) == chance.val) {
+                if (this.time >= chance.time && (this.numEnemies % chance.mod) == chance.val) {
                     this.AddEntity(new chance.type(this));
                     break;
                 }
