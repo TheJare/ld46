@@ -3,13 +3,15 @@
 Move your little white ball and stay alive as long as you can. Things hurt you
 if you touch them, and you also take damage if you move too long without recovering.
 
+You can play the game at http://iguanademos.com/Jare/games/ld46/
+
 ## Details
 
 An attempt at an entry to Ludum Dare #46. As usual, just a few hours
 available to do something, but at least I cleaned up some old Typescript
 gamedev bits I had.
 
-As usualy, I tweeted my original design shortly after waking up and reading about the topic: *Keep it Alive*:"
+As usualy, I tweeted my original design shortly after waking up and reading about the topic, **Keep it Alive**:
 
 - reach the goal keeping a candle alive, avoiding drops or buckets of water thrown at you.
 You also need to be careful how you move or the wind puts out the flame, but too slow and wax runs out.
@@ -35,6 +37,10 @@ Build with `npm run watch`.
 
 To get proper source maps in the browser, serve the repo folder, for example
 `python -m http.serve 8080` then navigate to `http://localhost:8080/dist`.
+
+Developed with Typescript 3.8.3.
+
+Uses [almond js](https://github.com/requirejs/almond) for module support.
 
 ## License
 
