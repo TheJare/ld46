@@ -7,7 +7,8 @@ export default class UIElement {
 
     public constructor(ctx: CanvasRenderingContext2D, text: string, pos: Vec2, handler: () => void) {
         let extents = ctx.measureText(text);
-        this.tl = new Vec2(pos.x - extents.actualBoundingBoxLeft, pos.y - extents.actualBoundingBoxAscent);
+        // abs() because WTF Chrome and Firefox disagree on the sign of the value.
+        this.tl = new Vec2(pos.x - Math.abs(extents.actualBoundingBoxLeft), pos.y - extents.actualBoundingBoxAscent);
         this.br = new Vec2(pos.x + extents.actualBoundingBoxRight, pos.y + extents.actualBoundingBoxDescent);
         this.handler = handler;
         ctx.fillText(text, pos.x, pos.y);

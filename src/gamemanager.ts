@@ -38,7 +38,7 @@ export class GameManager {
         this.cam = new Camera(this.canvas);
         this.state = new State(this);
         window.addEventListener('resize', () => {this.cam = new Camera(this.canvas); this.state.Resize()});
-        this.canvas.addEventListener('click', (e) => this.state.Click(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY))));
+        this.canvas.addEventListener('click', (e) => { this.state.Click(this.cam.Screen2Canvas(new Vec2(e.x, e.y)))});
         this.canvas.addEventListener('mousedown', (e) => { if (!this.usingTouch) this.state.MouseDown(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY)))});
         this.canvas.addEventListener('mouseup', (e) => { if (!this.usingTouch) this.state.MouseUp(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY)))});
         this.canvas.addEventListener('mousemove', (e) => { if (!this.usingTouch) this.state.MouseMove(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY)), e.buttons != 0)});
