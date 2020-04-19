@@ -1,5 +1,7 @@
 # Keep it Alive LD46
 
+![alt text](cover.jpg)
+
 Move your little white ball and stay alive as long as you can. Things hurt you
 if you touch them, and you also take damage if you move too long without recovering.
 
