@@ -11,7 +11,9 @@ enum EntityType {
     BaseEntity,
     Player,
     Waterdrop,
-    Block
+    Block,
+    FastDrop,
+    TrackerDrop
 }
 
 class Entity {
@@ -39,11 +41,12 @@ class Entity {
 }
 
 class Player extends Entity {
-    speed: number = 70;
+    speed: number = 100;
     public strength: number = kPlayerMaxStrength;
 
     public constructor(game: GameState) {
         super(game);
+        this.radius = 7;
         this.health = kPlayerMaxHealth;
         this.type = EntityType.Player;
     }
@@ -70,13 +73,19 @@ class Player extends Entity {
     }
 
     public Render(dt: number) {
-        this.game.ctx.fillStyle = "#FFFFFF";
-        this.game.ctx.fillRect(this.pos.x-this.radius, this.pos.y-this.radius, 2*this.radius, 2*this.radius);
+        if (this.alive || ((this.game.time*10) % 10) < 5) {
+            this.game.ctx.fillStyle = "#FFFFFF";
+            this.game.ctx.beginPath();
+            this.game.ctx.arc(this.pos.x, this.pos.y, this.radius, 0, 2*Math.PI);
+            this.game.ctx.fill();
+        }
     }
 
 }
 
 class Waterdrop extends Entity {
+    color: string = "#00FFFF";
+
     public constructor(game: GameState) {
         super(game);
         this.pos = new Vec2((Math.random()*1.2 - 0.1)*game.cam.size.x, 1-this.radius);
@@ -100,8 +109,18 @@ class Waterdrop extends Entity {
     }
 
     public Render(dt: number) {
-        this.game.ctx.fillStyle = "#00FFFF";
+        this.game.ctx.fillStyle = this.color;
         this.game.ctx.fillRect(this.pos.x-this.radius, this.pos.y-this.radius, 2*this.radius, 2*this.radius);
+    }
+}
+
+class FastDrop extends Waterdrop {
+    public constructor(game: GameState) {
+        super(game);
+        this.type = EntityType.FastDrop;
+        this.pos.y -= (8-this.radius);
+        this.radius = 8;
+        this.vel.y *= 2;
     }
 }
 
@@ -112,6 +131,7 @@ class Sprinkler extends Waterdrop {
         super(game);
         this.pos.y -= (7-this.radius);
         this.radius = 7;
+        this.color = "#70FF40";
     }
 
     public Tick(dt: number) {
@@ -130,10 +150,37 @@ class Sprinkler extends Waterdrop {
             }
         }
     }
+}
 
-    public Render(dt: number) {
-        this.game.ctx.fillStyle = "#00FFFF";
-        this.game.ctx.fillRect(this.pos.x-this.radius, this.pos.y-this.radius, 2*this.radius, 2*this.radius);
+class TrackerDrop extends Waterdrop {
+
+    public constructor(game: GameState) {
+        super(game);
+        // this.type = EntityType.TrackerDrop;
+        this.pos.y -= (7-this.radius);
+        this.radius = 7;
+        this.color = "#FFFF40";
+    }
+
+    public Tick(dt: number) {
+        super.Tick(dt);
+        if (this.alive) {
+            let accel = 200;
+            if (this.pos.x < this.game.player.pos.x) {
+                this.vel.x += accel*dt;
+            } else if (this.pos.x > this.game.player.pos.x) {
+                this.vel.x -= accel*dt;
+            }
+            if (this.pos.y < this.game.player.pos.y) {
+                this.vel.y += accel*dt;
+            } else if (this.pos.y > this.game.player.pos.y) {
+                this.vel.y -= accel*dt;
+            }
+            let speed = this.vel.magnitude();
+            if (speed > 150) {
+                this.vel.scale(150/speed);
+            }
+        }
     }
 }
 
@@ -151,7 +198,7 @@ class Block extends Entity {
         if (this.game.player.alive) {
             if (this.pos.subbed(this.game.player.pos).magnitude() < this.radius) {
                 this.game.player.health = 0; // Instakill
-                this.health = -1;
+                this.health = 0;
             }
         }
         for (let i = 0; i < this.game.entities.length; i++) {
@@ -179,10 +226,14 @@ export default class GameState extends State {
     public player: Player;
     public entities: Entity[];
     private newEntities: Entity[];
+    private lastDrag: Vec2 = new Vec2(0,0);
+    private score = 0;
 
     private timeToNextEnemy = 0;
     private enemiesPerSec = 30;
     private numEnemies = 0;
+
+    private gameoverTimer = 4;
 
     public constructor(game: GameManager, public globalData: GlobalData) {
         super(game);
@@ -200,9 +251,7 @@ export default class GameState extends State {
         this.newEntities.push(e);
     }
 
-    public Tick(dt: number) {
-        super.Tick(dt);
-
+    private GameplayLogic(dt: number) {
         function RunEntities(entities: Entity[], dt: number): Entity[] {
             for (let i = 0; i < entities.length; i++) {
                 let e = entities[i];
@@ -231,17 +280,37 @@ export default class GameState extends State {
         this.timeToNextEnemy -= dt;
         while (this.timeToNextEnemy <= 0) {
             this.numEnemies++;
-            this.AddEntity(((this.numEnemies % 100) == 0)?
-                new Block(this) :
-                (((this.numEnemies % 80) == 30)?
-                    new Sprinkler(this) :
-                    new Waterdrop(this)));
+            let enemySpawnChances = [
+                { mod: 100, val:  0, type: Block },
+                { mod:  80, val: 30, type: Sprinkler },
+                { mod: 170, val: 66, type: TrackerDrop },
+                { mod:  23, val:  7, type: FastDrop },
+                { mod:   1, val:  0, type: Waterdrop }
+            ];
+            for (let chance of enemySpawnChances) {
+                if ((this.numEnemies % chance.mod) == chance.val) {
+                    this.AddEntity(new chance.type(this));
+                    break;
+                }
+            }
             this.timeToNextEnemy = 1/this.enemiesPerSec;
+        }
+        this.score = this.time;
+    }
+
+    public Tick(dt: number) {
+        super.Tick(dt);
+
+        if (this.player.alive) {
+            this.GameplayLogic(dt);
         }
 
         if (!this.player.alive) {
-            this.globalData.AddScore(Math.floor(this.time));
-            this.game.QueueState(new MenuState(this.game, this.globalData));
+            this.gameoverTimer -= dt;
+            if (this.gameoverTimer <= 0) {
+                this.globalData.AddScore(Math.floor(this.score));
+                this.game.QueueState(new MenuState(this.game, this.globalData));
+            }
         }
 
         this.Render(dt);
@@ -255,36 +324,48 @@ export default class GameState extends State {
         // Entity render
         for (let i = 0; i < this.entities.length; i++) {
             let e = this.entities[i];
-            if (e.alive) {
-                e.Render(dt);
-            }
+            e.Render(dt);
         }
 
         // UI Render
-        this.game.ctx.fillStyle = "#FFF";
-        this.game.ctx.fillRect(this.cursor.x-2, this.cursor.y-20, 4, 40);
-        this.game.ctx.fillRect(this.cursor.x-20, this.cursor.y-2, 40, 4);
+        // this.game.ctx.fillStyle = "#FFF";
+        // this.game.ctx.fillRect(this.cursor.x-2, this.cursor.y-20, 4, 40);
+        // this.game.ctx.fillRect(this.cursor.x-20, this.cursor.y-2, 40, 4);
 
+        this.game.ctx.fillStyle = "#FFF";
         this.game.ctx.font = '24px sans-serif';
         this.game.ctx.textAlign = "left";
-        this.game.ctx.fillText(`Score: ${Math.floor(this.time)}`, 2, 24);
+        this.game.ctx.fillText(`Score: ${Math.floor(this.score)}`, 2, 24);
 
         this.game.ctx.fillStyle = "#000";
-        // this.game.ctx.fillRect(2, 30, 100, 10);
-        this.game.ctx.fillRect(2, 43, 100, 10);
+        this.game.ctx.fillRect(1, 29, 152, 16);
+        this.game.ctx.fillRect(1, 49, 152, 16);
         let xpf = Math.pow(this.player.strength / 100, 2);
         let hpf = this.player.health / kPlayerMaxHealth;
         this.game.ctx.fillStyle = "#4FF";
-        this.game.ctx.fillRect(2, 30, 100*xpf, 10);
+        this.game.ctx.fillRect(2, 30, 150*xpf, 14);
         this.game.ctx.fillStyle = `rgb(${255*(1-hpf)}, ${255*hpf}, 0)`;
-        this.game.ctx.fillRect(2, 43, 100*hpf, 10);
+        this.game.ctx.fillRect(2, 50, 150*hpf, 14);
     }
 
     public Click(p: Vec2) {
     }
 
+    public MouseDown(p: Vec2) {
+        this.lastDrag = p;
+    }
+
+    public MouseUp(p: Vec2) {
+        this.cursor = this.player.pos.clone();
+    }
+
     public MouseMove(p: Vec2, pressed: boolean) {
-        this.cursor = p;
+        if (pressed) {
+            this.cursor = this.cursor.add(p.subbed(this.lastDrag));
+            this.lastDrag = p;
+        } else {
+            this.cursor = p;
+        }
     }
 
 }

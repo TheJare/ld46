@@ -4,7 +4,7 @@ export default class Camera {
     public size: Vec2;
     public m2c: Vec2;
 
-    public constructor(canvas: HTMLCanvasElement, size = 800) {
+    public constructor(canvas: HTMLCanvasElement, size = 1280) {
         let r = canvas.offsetWidth/canvas.offsetHeight;
         this.size = (r > 1)? new Vec2(size, size/r) : new Vec2(size*r, size);
         this.m2c = new Vec2(this.size.x/canvas.clientWidth, this.size.y/canvas.clientHeight);

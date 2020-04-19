@@ -30,6 +30,7 @@ export class GameManager {
     public state: State;
     nextState: State;
     public time: number = 0;
+    private usingTouch = false;
 
     public constructor() {
         this.canvas = document.getElementById("canvas") as HTMLCanvasElement;
@@ -38,13 +39,13 @@ export class GameManager {
         this.state = new State(this);
         window.addEventListener('resize', () => {this.cam = new Camera(this.canvas); this.state.Resize()});
         this.canvas.addEventListener('click', (e) => this.state.Click(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY))));
-        this.canvas.addEventListener('mousedown', (e) => this.state.MouseDown(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY))));
-        this.canvas.addEventListener('mouseup', (e) => this.state.MouseUp(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY))));
-        this.canvas.addEventListener('mousemove', (e) => this.state.MouseMove(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY)), e.buttons != 0));
+        this.canvas.addEventListener('mousedown', (e) => { if (!this.usingTouch) this.state.MouseDown(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY)))});
+        this.canvas.addEventListener('mouseup', (e) => { if (!this.usingTouch) this.state.MouseUp(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY)))});
+        this.canvas.addEventListener('mousemove', (e) => { if (!this.usingTouch) this.state.MouseMove(this.cam.Screen2Canvas(new Vec2(e.offsetX, e.offsetY)), e.buttons != 0)});
         // Everything would be nicer with pointer events, thanks Apple.
-        this.canvas.addEventListener('touchstart', (e) => this.state.MouseDown(this.cam.Screen2Canvas(new Vec2(e.changedTouches[0].clientX, e.changedTouches[0].clientY))));
-        this.canvas.addEventListener('touchend', (e) => this.state.MouseUp(this.cam.Screen2Canvas(new Vec2(e.changedTouches[0].clientX, e.changedTouches[0].clientY))));
-        this.canvas.addEventListener('touchmove', (e) => this.state.MouseMove(this.cam.Screen2Canvas(new Vec2(e.changedTouches[0].clientX, e.changedTouches[0].clientY)), true));
+        this.canvas.addEventListener('touchstart', (e) => { this.usingTouch = true; this.state.MouseDown(this.cam.Screen2Canvas(new Vec2(e.changedTouches[0].clientX, e.changedTouches[0].clientY)))});
+        this.canvas.addEventListener('touchend', (e) => { this.usingTouch = true; this.state.MouseUp(this.cam.Screen2Canvas(new Vec2(e.changedTouches[0].clientX, e.changedTouches[0].clientY)))});
+        this.canvas.addEventListener('touchmove', (e) => { this.usingTouch = true; this.state.MouseMove(this.cam.Screen2Canvas(new Vec2(e.changedTouches[0].clientX, e.changedTouches[0].clientY)), true)});
 
         window.requestAnimationFrame(() => this.Tick());
     }
