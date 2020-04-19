@@ -7,6 +7,8 @@ if you touch them, and you also take damage if you move too long without recover
 
 You can play the game at http://iguanademos.com/Jare/games/ld46/
 
+Ludum Dare link: https://ldjam.com/events/ludum-dare/46/keep-it-alive-3
+
 ## Details
 
 An attempt at an entry to Ludum Dare #46. As usual, just a few hours
